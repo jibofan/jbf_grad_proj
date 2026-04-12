@@ -17,7 +17,7 @@ sudo apt install -y \
 ## 运行说明
 
 ### 数据生成
-在 Matlab 中运行 [gen_mat](./src/gen_mat.m)，生成的矩阵 `matrix.mat` 和 `matrix_0.mat` 分别代表原矩阵和添加边后的矩阵。
+在 Matlab 中运行 [gen_mat](./src/gen_mat.m)，将会在 [matrices](./matrices) 中随机生成测试矩阵，生成的矩阵 `matrix.mat` 和 `matrix_0.mat` 分别代表原矩阵和添加边后的矩阵。
 
 ### 求置换向量
 在 [src](./src) 目录下运行：
@@ -26,7 +26,7 @@ sudo apt install -y \
 ./run_demo.sh
 ```
 
-求得的置换向量保存在 [result](./result) 中，`perm_vec.mat` 和 `perm_vec_0.mat` 分别代表 `matrix.mat` 和 `matrix_0.mat` 的置换向量。
+求得的置换向量将保存在 [result](./result) 中，`perm_vec.mat` 和 `perm_vec_0.mat` 分别代表 `matrix.mat` 和 `matrix_0.mat` 的置换向量。
 
 当前叉数 $k = 100$（可修改 [main](./src/main.cpp) 第 67 行，将 `init` 函数的第一个参数调整为 $k$ ）。
 
