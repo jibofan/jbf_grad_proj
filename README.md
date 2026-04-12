@@ -37,10 +37,17 @@ sudo apt install -y \
 已测试的数据在文件夹 [tested](./tested) 中，每个子文件夹代表一组测试，子文件夹的结构为
 
 m
+
 ├── matrix.mat
+
 ├── matrix_0.mat
+
 ├── perm_vec.mat
+
 ├── perm_vec_0.mat
-├── time.png
-├── spy.png
-└── parameter.txt
+
+├── time.png ：运行时间
+
+├── spy.png ：添加边后矩阵稀疏模式可视化
+
+└── parameter.txt ：矩阵生成参数，三行分别代表 $n,\lambda,e$
