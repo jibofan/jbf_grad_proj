@@ -1,0 +1,2 @@
+/usr/bin/ar qc libstump.a CMakeFiles/stump.dir/Stump.cpp.o
+/usr/bin/ranlib libstump.a

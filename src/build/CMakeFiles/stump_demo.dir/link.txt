@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/stump_demo.dir/main.cpp.o -o stump_demo  libstump.a /usr/lib/x86_64-linux-gnu/libmatio.so /usr/lib/x86_64-linux-gnu/libmetis.so /usr/lib/x86_64-linux-gnu/libamd.so /usr/lib/gcc/x86_64-linux-gnu/13/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.a 

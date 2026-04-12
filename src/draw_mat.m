@@ -1,10 +1,10 @@
 clear;clc;close all;
 
-load('matrix.mat', 'A');
-load('matrix_0.mat', 'A_0');
+load('../matrices/matrix.mat', 'A');
+load('../matrices/matrix_0.mat', 'A_0');
 
-% load('perm_vec.mat', 'perm');
-load('perm_vec_0.mat', 'perm');
+% load('../result/perm_vec.mat', 'perm');
+load('../result/perm_vec_0.mat', 'perm');
 
 perm = perm + 1;
 

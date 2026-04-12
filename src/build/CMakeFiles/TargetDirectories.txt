@@ -1,0 +1,4 @@
+/home/lele2/code/parparth/src/build/CMakeFiles/stump.dir
+/home/lele2/code/parparth/src/build/CMakeFiles/stump_demo.dir
+/home/lele2/code/parparth/src/build/CMakeFiles/edit_cache.dir
+/home/lele2/code/parparth/src/build/CMakeFiles/rebuild_cache.dir
