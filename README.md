@@ -17,7 +17,7 @@ sudo apt install -y \
 ## 运行说明
 
 ### 数据生成
-在 Matlab 中运行 [gen_mat](./matrices/gen_mat.m)，生成的矩阵 `matrix.mat` 和 `matrix_0.mat` 分别代表原矩阵和添加边后的矩阵。
+在 Matlab 中运行 [gen_mat](./src/gen_mat.m)，生成的矩阵 `matrix.mat` 和 `matrix_0.mat` 分别代表原矩阵和添加边后的矩阵。
 
 ### 求置换向量
 在 [src](./src) 目录下运行：
@@ -31,7 +31,7 @@ sudo apt install -y \
 当前叉数 $k = 100$（可修改 [main](./src/main.cpp) 第 67 行，将 `init` 函数的第一个参数调整为 $k$ ）。
 
 ### 结果可视化
-在 Matlab 中运行 [draw_mat](./result/draw_mat.m) 以得到置换后矩阵稀疏模式的可视化结果。
+在 Matlab 中运行 [draw_mat](./src/draw_mat.m) 以得到置换后矩阵稀疏模式的可视化结果。
 
 ## 测试结果
 已测试的数据在文件夹 [tested](./tested) 中，每个子文件夹代表一组测试，子文件夹的结构为
