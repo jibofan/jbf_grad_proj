@@ -36,7 +36,7 @@ sudo apt install -y \
 ## 测试结果
 已测试的数据在文件夹 [tested](./tested) 中，每个子文件夹代表一组测试，子文件夹的结构为
 
-m
+i
 
 ├── matrix.mat
 
