@@ -1,4 +1,4 @@
-# parparth
+# Graduation Project
 
 ## 环境配置
 目前只支持 Ubuntu，环境配置命令为：
