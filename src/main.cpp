@@ -3,6 +3,7 @@
 #include <matio.h>
 #include <Eigen/Sparse>
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <string>
 #include <vector>
@@ -51,7 +52,15 @@ int main()
     const std::string result_dir = std::string(DATA_DIR) + "/../result";
     mkdir(result_dir.c_str(), 0755);
 
-    // ---- Load matrices ----
+    // ---- Manual input ----
+    int kway_parts = 0, N = 0;
+    std::cout << "Enter branch factor (first arg of init): ";
+    std::cin >> kway_parts;
+    std::cout << "Enter number of runs N: ";
+    std::cin >> N;
+
+    // ---- Load matrices (once) ----
+    std::cout << "Loading matrices..." << std::endl;
     Eigen::SparseMatrix<double> L_old = readMAT(data_dir + "/matrix.mat");
     Eigen::SparseMatrix<double> L_new = readMAT(data_dir + "/matrix_0.mat");
     int M_n = (int)L_old.rows();
@@ -59,28 +68,70 @@ int main()
     std::vector<int> Mp_old, Mi_old, Mp_new, Mi_new;
     LaplacianToMpMi(L_old, Mp_old, Mi_old);
     LaplacianToMpMi(L_new, Mp_new, Mi_new);
+    std::cout << "Matrices loaded. n = " << M_n << std::endl;
 
-    // ---- First permutation: init ----
-    Stump s;
-    std::vector<int> mesh_perm;
-    auto t1 = clk::now();
-    s.init(100, M_n, Mp_old.data(), Mi_old.data(), mesh_perm);
-    auto t2 = clk::now();
-    double ms1 = std::chrono::duration<double, std::milli>(t2 - t1).count();
-    std::cout << "init (first perm): " << ms1 << " ms\n";
-    std::cout << "  kway partition: " << s.t_kway_ms << " ms\n";
-    std::cout << "  amd permutation: " << s.t_amd_ms << " ms\n";
-    writePermMAT(result_dir + "/perm_vec.mat", mesh_perm);
+    // ---- Storage for timing results ----
+    std::vector<double> t_init(N), t_kway(N), t_amd(N), t_redecomp(N);
+    std::vector<int> mesh_perm, mesh_perm_init;
 
-    // ---- Second permutation: redecompose ----
-    auto t3 = clk::now();
-    s.redecompose(M_n, Mp_old.data(), Mi_old.data(),
-                  Mp_new.data(), Mi_new.data(), mesh_perm);
-    auto t4 = clk::now();
-    double ms2 = std::chrono::duration<double, std::milli>(t4 - t3).count();
-    std::cout << "redecompose (second perm): " << ms2 << " ms\n";
-    writePermMAT(result_dir + "/perm_vec_0.mat", mesh_perm);
+    // ---- Run N independent iterations ----
+    for (int i = 0; i < N; ++i) {
+        std::cout << "--- Run " << (i + 1) << " / " << N << " ---" << std::endl;
 
-    std::cout << "Saved: " << result_dir << "/perm_vec.mat, perm_vec_0.mat\n";
+        Stump s;
+        mesh_perm.clear();
+
+        // init
+        auto t1 = clk::now();
+        s.init(kway_parts, M_n, Mp_old.data(), Mi_old.data(), mesh_perm);
+        auto t2 = clk::now();
+        t_init[i] = std::chrono::duration<double, std::milli>(t2 - t1).count();
+        t_kway[i] = s.t_kway_ms;
+        t_amd[i]  = s.t_amd_ms;
+
+        std::cout << "  init:  " << t_init[i] << " ms  (kway: "
+                  << t_kway[i] << " ms, amd: " << t_amd[i] << " ms)" << std::endl;
+
+        mesh_perm_init = mesh_perm; // snapshot after init, before redecompose
+
+        // redecompose
+        auto t3 = clk::now();
+        s.redecompose(M_n, Mp_old.data(), Mi_old.data(),
+                      Mp_new.data(), Mi_new.data(), mesh_perm);
+        auto t4 = clk::now();
+        t_redecomp[i] = std::chrono::duration<double, std::milli>(t4 - t3).count();
+
+        std::cout << "  redecompose: " << t_redecomp[i] << " ms" << std::endl;
+
+        // Save permutation vectors from the last run only
+        if (i == N - 1) {
+            writePermMAT(result_dir + "/perm_vec.mat", mesh_perm_init);
+            writePermMAT(result_dir + "/perm_vec_0.mat", mesh_perm);
+            std::cout << "Saved perm_vec.mat and perm_vec_0.mat from last run" << std::endl;
+        }
+    }
+
+    // ---- Write runtime.txt ----
+    std::string runtime_path = result_dir + "/runtime.txt";
+    std::ofstream ofs(runtime_path);
+    if (!ofs) throw std::runtime_error("Cannot open " + runtime_path + " for writing");
+    ofs << N << "\n";
+    for (int i = 0; i < N; ++i) {
+        ofs << t_init[i] << " " << t_kway[i] << " "
+            << t_amd[i]  << " " << t_redecomp[i] << "\n";
+    }
+    // Average line
+    double avg_init = 0, avg_kway = 0, avg_amd = 0, avg_redecomp = 0;
+    for (int i = 0; i < N; ++i) {
+        avg_init     += t_init[i];
+        avg_kway     += t_kway[i];
+        avg_amd      += t_amd[i];
+        avg_redecomp += t_redecomp[i];
+    }
+    avg_init /= N; avg_kway /= N; avg_amd /= N; avg_redecomp /= N;
+    ofs << avg_init << " " << avg_kway << " " << avg_amd << " " << avg_redecomp << "\n";
+    ofs.close();
+    std::cout << "Timing results saved to " << runtime_path << std::endl;
+
     return 0;
 }
