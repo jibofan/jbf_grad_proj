@@ -8,7 +8,6 @@ class Stump
 public:
     int num_nodes = 0;                    // 分区数
     bool stump_init = false;
-    std::vector<int> stump_node_counts;   // 各子图节点数
     std::vector<idx_t> DOF2node;          // global dof -> partition id
 
     // 标记顶点是否为分割边端点（大小 M_n，1=是，0=否）

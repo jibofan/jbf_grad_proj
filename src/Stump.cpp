@@ -14,7 +14,6 @@ void Stump::clear()
 {
     num_nodes = 0;
     stump_init = false;
-    stump_node_counts.clear();
     DOF2node.clear();
     is_cut_vertex.clear();
 }
@@ -81,7 +80,6 @@ void Stump::permute(
     }
 
     if (Iperm) {
-        // perm[i] 各不相同，写入 Iperm 的位置互不重叠
         #pragma omp parallel for schedule(static)
         for (int i = 0; i < M_n; ++i) {
             Iperm[perm[i]] = i;
@@ -119,18 +117,7 @@ bool Stump::decompose(
         return false;
     }
 
-    // ---- stump_node_counts（直方图，用 atomic 累加）----
-    stump_node_counts.assign(num_nodes, 0);
-    #pragma omp parallel for schedule(static)
-    for (int i = 0; i < M_n; ++i) {
-        int p = static_cast<int>(part[i]);
-        if (p >= 0 && p < num_nodes) {
-            #pragma omp atomic
-            stump_node_counts[p]++;
-        }
-    }
-
-    // ---- DOF2node（每个 i 写入不同位置，无竞争）----
+    // ---- DOF2node ----
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < M_n; ++i) {
         int global_dof = dofs[i];
@@ -140,7 +127,7 @@ bool Stump::decompose(
         }
     }
 
-    // ---- is_cut_vertex（每个 u 只写 is_cut_vertex[u]，无竞争）----
+    // ---- is_cut_vertex ----
     is_cut_vertex.assign(M_n, 0);
     #pragma omp parallel for schedule(dynamic, 64)
     for (int u = 0; u < M_n; ++u) {
@@ -160,7 +147,7 @@ bool Stump::decompose(
 }
 
 // ---------------------------------------------------------------------------
-// buildSubgraph — 提取子图（OpenMP 并行计数 + 填充）
+// buildSubgraph — 提取子图（计数 + 填充）
 // ---------------------------------------------------------------------------
 static void buildSubgraph(
     const std::vector<int>& verts,
@@ -176,7 +163,7 @@ static void buildSubgraph(
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < sub_n; ++i) g2l[verts[i]] = i;
 
-    // 并行计数每个局部顶点的邻居数
+    // 计数每个局部顶点的邻居数
     sub_Mp.assign(sub_n + 1, 0);
     #pragma omp parallel for schedule(dynamic, 64)
     for (int li = 0; li < sub_n; ++li) {
@@ -188,10 +175,10 @@ static void buildSubgraph(
         sub_Mp[li + 1] = cnt;
     }
 
-    // 前缀和（串行）
+    // 前缀和
     for (int i = 0; i < sub_n; ++i) sub_Mp[i + 1] += sub_Mp[i];
 
-    // 并行填充（每个 li 写入不重叠区间）
+    // 填充
     sub_Mi.resize(sub_Mp[sub_n]);
     #pragma omp parallel for schedule(dynamic, 64)
     for (int li = 0; li < sub_n; ++li) {
@@ -222,7 +209,7 @@ static void amdAndUpdatePerm(
     int sub_n = static_cast<int>(verts.size());
     if (sub_n == 0) return;
 
-    // AMD（库函数，内部无法并行，串行调用）
+    // AMD
     std::vector<int> sub_perm(sub_n);
     if (sub_Mp[sub_n] == 0) {
         #pragma omp parallel for schedule(static)
@@ -239,7 +226,7 @@ static void amdAndUpdatePerm(
         if (is_in_sub[mesh_perm[i]]) positions.push_back(i);
     }
 
-    // 并行回填（每个 i 写入不同位置）
+    // 回填
     #pragma omp parallel for schedule(static)
     for (int i = 0; i < sub_n; ++i) {
         mesh_perm[positions[i]] = verts[sub_perm[i]];
@@ -258,7 +245,7 @@ void Stump::redecompose(
     assert(M_n >= 0);
     assert(stump_init);
 
-    // ==== Step 1: 识别新增边（内部已 OpenMP 并行）====
+    // ==== Step 1: 识别新增边 ====
     std::vector<std::pair<int,int>> added_edges;
     ComputeAddedEdges(M_n, Mp_new, Mi_new, Mp_old, Mi_old, added_edges);
 
@@ -275,6 +262,22 @@ void Stump::redecompose(
         if (pu != pv || is_cut_vertex[u] || is_cut_vertex[v]) {
             mark[pu] = 1;
             mark[pv] = 1;
+
+            // 切割顶点：将其直接关联的所有子图也标记为第一类
+            if (is_cut_vertex[u]) {
+                for (int e = Mp_new[u]; e < Mp_new[u + 1]; ++e) {
+                    int w = Mi_new[e];
+                    if (w >= 0 && w < M_n)
+                        mark[static_cast<int>(DOF2node[w])] = 1;
+                }
+            }
+            if (is_cut_vertex[v]) {
+                for (int e = Mp_new[v]; e < Mp_new[v + 1]; ++e) {
+                    int w = Mi_new[e];
+                    if (w >= 0 && w < M_n)
+                        mark[static_cast<int>(DOF2node[w])] = 1;
+                }
+            }
         } else {
             if (mark[pu] != 1) mark[pu] = 2;
         }
@@ -298,7 +301,7 @@ void Stump::redecompose(
                 is_type1[i] = 1;
         }
 
-        // 收集顶点列表（串行，因为需要保序的 push_back）
+        // 收集顶点列表
         std::vector<int> type1_verts;
         type1_verts.reserve(M_n);
         for (int i = 0; i < M_n; ++i) {
@@ -306,7 +309,7 @@ void Stump::redecompose(
         }
         int sub_n = static_cast<int>(type1_verts.size());
 
-        // 提取子图（内部已 OpenMP 并行）
+        // 提取子图
         std::vector<int> sub_Mp, sub_Mi;
         buildSubgraph(type1_verts, M_n, Mp_new, Mi_new, g2l, sub_Mp, sub_Mi);
 
@@ -344,8 +347,6 @@ void Stump::redecompose(
     }
 
     // ==== Step 4: 第二类子图 —— 逐子图 AMD ====
-    // 外层循环迭代次数 ≤ num_nodes（通常很小），并行化收益有限
-    // 内部 buildSubgraph / amdAndUpdatePerm 已各自并行
     for (int p = 0; p < num_nodes; ++p) {
         if (mark[p] != 2) continue;
 
@@ -365,17 +366,6 @@ void Stump::redecompose(
         std::vector<int> sub_Mp, sub_Mi;
         buildSubgraph(verts, M_n, Mp_new, Mi_new, g2l, sub_Mp, sub_Mi);
         amdAndUpdatePerm(verts, sub_Mp, sub_Mi, is_part, M_n, mesh_perm);
-    }
-
-    // ==== Step 5: 更新元数据（并行）====
-    stump_node_counts.assign(num_nodes, 0);
-    #pragma omp parallel for schedule(static)
-    for (int i = 0; i < M_n; ++i) {
-        int p = static_cast<int>(DOF2node[i]);
-        if (p >= 0 && p < num_nodes) {
-            #pragma omp atomic
-            stump_node_counts[p]++;
-        }
     }
 
     is_cut_vertex.assign(M_n, 0);
