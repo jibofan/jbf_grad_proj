@@ -23,7 +23,7 @@ sudo apt install -y \
 
 输出：在 [matrices](./matrices) 中，矩阵 `matrix.mat` 和 `matrix_0.mat` 分别代表原矩阵和添加边后的矩阵。
 
-### 求置换向量
+### 求解置换向量
 在 [src](./src) 目录下运行：
 
 ```bash
