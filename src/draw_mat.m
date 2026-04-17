@@ -15,6 +15,6 @@ A0p = A_0(perm, perm);
 
 figure;
 spy(A0p);
-title('Sparsity Pattern of Cholesky Factor R after AMD Permutation');
+title('Sparsity Pattern after Permutation');
 xlabel('Column Index');
 ylabel('Row Index');
