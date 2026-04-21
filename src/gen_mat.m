@@ -1,5 +1,5 @@
 clear;clc;close all;
-[x, t] = readObj('../mesh/bimba');
+[x, t] = readObj('../mesh/ra');
 B = findBoundary(x, t);
 nv = size(x, 1);
 I = setdiff(1:nv, B);

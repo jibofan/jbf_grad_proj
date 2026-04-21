@@ -10,11 +10,11 @@ perm = perm + 1;
 p=amd(A_0);
 
 % Ap = A(perm, perm);
-A0p = A_0(perm, perm);
+A_0p = A_0(perm, perm);
 
 
 figure;
-spy(A0p);
-title('Sparsity Pattern after Permutation');
+spy(A_0p);
+title('Sparsity Pattern');
 xlabel('Column Index');
 ylabel('Row Index');
