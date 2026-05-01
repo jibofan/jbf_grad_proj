@@ -14,7 +14,7 @@ A_0p = A_0(perm, perm);
 
 
 figure;
-spy(A_0p);
+spy(A_0);
 title('Sparsity Pattern');
 xlabel('Column Index');
 ylabel('Row Index');
